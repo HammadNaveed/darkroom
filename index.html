@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dark Room — Photo Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ─── Reset & Variables ─────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #111010;
+  --surface:  #1a1918;
+  --panel:    #201f1e;
+  --border:   #2e2c2a;
+  --border2:  #3d3b38;
+  --text:     #e8e2d9;
+  --muted:    #8a8278;
+  --accent:   #c8a96e;   /* warm gold */
+  --accent2:  #7c9e8a;   /* sage green */
+  --danger:   #b85c5c;
+  --radius:   4px;
+  --mono:     'DM Mono', monospace;
+  --sans:     'DM Sans', sans-serif;
+  --serif:    'Playfair Display', serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ─── Layout ────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr;
+  grid-template-columns: 300px 1fr 280px;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ─── Header ────────────────────────────────── */
+#header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.logo-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.logo-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Buttons ───────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--panel); border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .35; pointer-events: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 500; }
+.btn.primary:hover { background: #d9bc84; }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: rgba(184,92,92,.1); }
+.btn.icon { padding: 6px 10px; }
+
+/* ─── Left Panel – Operations Stack ─────────── */
+#left-panel {
+  grid-row: 2;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.panel-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ops-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+.ops-list::-webkit-scrollbar { width: 3px; }
+.ops-list::-webkit-scrollbar-track { background: transparent; }
+.ops-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.op-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background .1s;
+  border-left: 2px solid transparent;
+}
+.op-item:hover { background: var(--panel); }
+.op-item.active { border-left-color: var(--accent); background: var(--panel); }
+
+.op-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.op-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+.op-remove {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 0 0 8px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.op-item:hover .op-remove { opacity: 1; }
+.op-remove:hover { color: var(--danger); }
+
+.ops-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+.ops-empty span { display: block; font-size: 28px; margin-bottom: 8px; opacity: .4; }
+
+.ops-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── Canvas Area ───────────────────────────── */
+#canvas-area {
+  grid-row: 2;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+  background: rgba(17,16,16,.85);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  backdrop-filter: blur(8px);
+}
+
+#drop-zone {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: background .2s;
+}
+#drop-zone.drag-over { background: rgba(200,169,110,.04); }
+#drop-zone.hidden { display: none; }
+
+.drop-icon {
+  font-size: 48px;
+  opacity: .25;
+}
+.drop-title {
+  font-family: var(--serif);
+  font-size: 24px;
+  color: var(--muted);
+}
+.drop-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  opacity: .6;
+  letter-spacing: 1px;
+}
+
+#img-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+#img-container.hidden { display: none; }
+
+#preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: opacity .2s;
+}
+#preview-img.processing { opacity: .4; }
+
+/* Compare slider */
+#compare-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  user-select: none;
+}
+#compare-wrap.hidden { display: none; }
+#compare-orig, #compare-curr {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+}
+#compare-orig {
+  position: absolute;
+  top: 0; left: 0;
+  clip-path: inset(0 50% 0 0);
+}
+.compare-divider {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  z-index: 3;
+}
+.compare-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: ew-resize;
+  font-size: 14px;
+}
+
+/* Processing overlay */
+.processing-badge {
+  position: absolute;
+  bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  display: none;
+  letter-spacing: 1px;
+}
+.processing-badge.show { display: flex; align-items: center; gap: 8px; }
+.spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Right Panel – Filter Browser ──────────── */
+#right-panel {
+  grid-row: 2;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.category-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cat-tab {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .15s;
+  border-bottom: 2px solid transparent;
+}
+.cat-tab:hover { color: var(--text); }
+.cat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.filter-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.filter-grid::-webkit-scrollbar { width: 3px; }
+.filter-grid::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.filter-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--panel);
+}
+.filter-card:hover { border-color: var(--accent); transform: translateX(-2px); }
+
+.filter-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+}
+.filter-card-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.filter-card-icon { font-size: 16px; }
+
+.filter-params {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.param-row { display: flex; flex-direction: column; gap: 4px; }
+.param-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+.param-val { color: var(--accent); }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--border2);
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: none;
+  transition: transform .1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+input[type="number"], input[type="text"], select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  width: 100%;
+  outline: none;
+}
+input[type="number"]:focus, select:focus { border-color: var(--accent2); }
+
+.color-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.color-label { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+input[type="color"] {
+  width: 32px; height: 24px;
+  border: 1px solid var(--border);
+  background: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 1px;
+}
+
+.add-filter-btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px;
+  border: 1px dashed var(--border2);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: all .15s;
+  text-transform: uppercase;
+}
+.add-filter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,.05); }
+
+/* ─── Export modal ──────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 28px;
+  width: 360px;
+  transform: translateY(12px);
+  transition: transform .2s;
+}
+.modal-backdrop.open .modal { transform: translateY(0); }
+.modal-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+.modal-field { margin-bottom: 16px; }
+.modal-field label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+
+/* ─── Toast ─────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  z-index: 200;
+  transform: translateY(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all .25s ease;
+  max-width: 280px;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.success { border-left: 3px solid var(--accent2); }
+#toast.error   { border-left: 3px solid var(--danger); }
+
+/* ─── Status bar ─────────────────────────────── */
+#statusbar {
+  position: fixed;
+  bottom: 0;
+  left: 300px; right: 280px;
+  height: 26px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 20px;
+  z-index: 10;
+}
+.status-item {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .5px;
+}
+.status-item b { color: var(--text); font-weight: 400; }
+
+/* ─── Scrollbar global ──────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─── Hidden ─────────────────────────────────── */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ─── Header ───────────────────────────── -->
+  <header id="header">
+    <div class="logo">
+      <span class="logo-title">Dark Room</span>
+      <span class="logo-sub">Photo Lab</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="btn-undo" disabled>↩ Undo</button>
+      <button class="btn" id="btn-compare" disabled>⇔ Compare</button>
+      <button class="btn" id="btn-reset" disabled>↺ Reset</button>
+      <button class="btn primary" id="btn-export" disabled>↓ Export</button>
+    </div>
+  </header>
+
+  <!-- ─── Left: Operations Stack ───────────── -->
+  <aside id="left-panel">
+    <div class="panel-header">
+      <span class="panel-label">Applied Operations</span>
+      <span id="ops-count" class="panel-label" style="color:var(--accent)">0</span>
+    </div>
+    <div class="ops-list" id="ops-list">
+      <div class="ops-empty" id="ops-empty">
+        <span>◎</span>
+        No operations yet.<br>Choose a filter →
+      </div>
+    </div>
+    <div class="ops-footer">
+      <button class="btn danger" id="btn-clear-ops" style="flex:1" disabled>Clear All</button>
+      <button class="btn primary" id="btn-apply" style="flex:2" disabled>▶ Process</button>
+    </div>
+  </aside>
+
+  <!-- ─── Centre: Canvas ───────────────────── -->
+  <main id="canvas-area">
+    <div class="canvas-toolbar">
+      <button class="btn icon" id="btn-open-file" title="Open Image">📂</button>
+      <button class="btn icon" id="btn-zoom-fit" title="Fit to screen">⊞</button>
+    </div>
+
+    <!-- Drop zone -->
+    <div id="drop-zone">
+      <div class="drop-icon">⬛</div>
+      <div class="drop-title">Drop your photograph</div>
+      <div class="drop-sub">PNG · JPG · WEBP · GIF</div>
+    </div>
+
+    <!-- Image container -->
+    <div id="img-container" class="hidden">
+      <img id="preview-img" alt="Preview"/>
+    </div>
+
+    <!-- Compare view -->
+    <div id="compare-wrap" class="hidden">
+      <img id="compare-curr" alt="Processed"/>
+      <img id="compare-orig" alt="Original"/>
+      <div class="compare-divider" id="compare-divider">
+        <div class="compare-handle">↔</div>
+      </div>
+    </div>
+
+    <div class="processing-badge" id="proc-badge">
+      <div class="spinner"></div>
+      PROCESSING
+    </div>
+  </main>
+
+  <!-- ─── Right: Filter Browser ────────────── -->
+  <aside id="right-panel">
+    <div class="category-tabs" id="cat-tabs">
+      <button class="cat-tab active" data-cat="color">Colour</button>
+      <button class="cat-tab" data-cat="tone">Tone</button>
+      <button class="cat-tab" data-cat="effect">Effect</button>
+      <button class="cat-tab" data-cat="transform">Transform</button>
+    </div>
+    <div class="filter-grid" id="filter-grid"></div>
+  </aside>
+
+</div>
+
+<!-- Status bar -->
+<div id="statusbar">
+  <span class="status-item" id="st-dims">No image</span>
+  <span class="status-item" id="st-ops">0 operations</span>
+  <span class="status-item" id="st-server" style="margin-left:auto">⬤ <b id="st-srv-txt">checking…</b></span>
+</div>
+
+<!-- Export modal -->
+<div class="modal-backdrop" id="export-modal">
+  <div class="modal">
+    <div class="modal-title">Export Image</div>
+    <div class="modal-field">
+      <label>Format</label>
+      <select id="exp-format">
+        <option value="JPEG">JPEG</option>
+        <option value="PNG">PNG</option>
+        <option value="WEBP">WEBP</option>
+      </select>
+    </div>
+    <div class="modal-field" id="exp-quality-row">
+      <label>Quality — <span id="exp-q-val">92</span>%</label>
+      <input type="range" id="exp-quality" min="10" max="100" value="92"/>
+    </div>
+    <div class="modal-field">
+      <label>Filename</label>
+      <input type="text" id="exp-name" value="darkroom-export"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="exp-cancel">Cancel</button>
+      <button class="btn primary" id="exp-download">Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Hidden file input -->
+<input type="file" id="file-input" accept="image/*" style="display:none"/>
+
+<script>
+// ══════════════════════════════════════════════
+//  State
+// ══════════════════════════════════════════════
+const API = "http://127.0.0.1:5000";
+
+let originalB64  = null;   // original upload
+let currentB64   = null;   // after last process
+let historyStack = [];     // undo stack of b64 strings
+let operations   = [];     // [{filter, params, label}]
+let comparing    = false;
+let imgW = 0, imgH = 0;
+
+// ══════════════════════════════════════════════
+//  Filter Definitions
+// ══════════════════════════════════════════════
+const FILTER_DEFS = {
+  color: [
+    { name:"grayscale",    icon:"◐", params:[] },
+    { name:"sepia",        icon:"🟫", params:[] },
+    { name:"invert",       icon:"◑", params:[] },
+    { name:"vintage",      icon:"📷", params:[] },
+    { name:"cross_process",icon:"⚡", params:[] },
+    { name:"cyberpunk",    icon:"🌀", params:[] },
+    { name:"duotone",      icon:"◧", params:[
+      { id:"color_a", label:"Shadow colour", type:"color_bgr", default:"#0a0a3c" },
+      { id:"color_b", label:"Highlight colour", type:"color_bgr", default:"#f0c870" },
+    ]},
+    { name:"warmth",  icon:"🔆", params:[{ id:"strength", label:"Strength", type:"range", min:0, max:120, default:50 }] },
+    { name:"cool",    icon:"❄", params:[{ id:"strength", label:"Strength", type:"range", min:0, max:120, default:50 }] },
+  ],
+  tone: [
+    { name:"brightness",icon:"☀", params:[{ id:"value",  label:"Amount",   type:"range", min:-150, max:150, default:30 }] },
+    { name:"contrast",  icon:"◈", params:[{ id:"value",  label:"Factor",   type:"range", min:0.2,  max:3,   step:.05, default:1.3 }] },
+    { name:"exposure",  icon:"⊛", params:[{ id:"stops",  label:"Stops",    type:"range", min:-3,   max:3,   step:.1,  default:1 }] },
+    { name:"gamma",     icon:"γ", params:[{ id:"value",  label:"Gamma",    type:"range", min:0.2,  max:4,   step:.05, default:1.5 }] },
+    { name:"saturation",icon:"◉", params:[{ id:"value",  label:"Amount",   type:"range", min:0,    max:4,   step:.05, default:1.5 }] },
+    { name:"hue_shift", icon:"⟳", params:[{ id:"shift",  label:"Degrees",  type:"range", min:-90,  max:90,  default:30 }] },
+    { name:"shadows",   icon:"▼", params:[{ id:"lift",   label:"Lift",     type:"range", min:-80,  max:80,  default:30 }] },
+    { name:"highlights",icon:"▲", params:[{ id:"crush",  label:"Adjust",   type:"range", min:-80,  max:80,  default:-20 }] },
+  ],
+  effect: [
+    { name:"blur",         icon:"◌", params:[{ id:"radius", label:"Radius",  type:"range", min:1, max:20, default:5 }] },
+    { name:"motion_blur",  icon:"↠", params:[
+      { id:"size",  label:"Size",  type:"range", min:3, max:40, default:15 },
+      { id:"angle", label:"Angle", type:"range", min:0, max:360, default:0 },
+    ]},
+    { name:"sharpen",      icon:"◇", params:[{ id:"strength", label:"Strength", type:"range", min:0, max:3, step:.05, default:1 }] },
+    { name:"unsharp_mask", icon:"◆", params:[
+      { id:"radius", label:"Radius", type:"range", min:1, max:10, default:3 },
+      { id:"amount", label:"Amount", type:"range", min:0, max:4, step:.05, default:1.5 },
+    ]},
+    { name:"emboss",     icon:"⬡", params:[] },
+    { name:"edge_detect",icon:"⬢", params:[] },
+    { name:"sketch",     icon:"✏", params:[] },
+    { name:"oil_paint",  icon:"🖌", params:[] },
+    { name:"pixelate",   icon:"⊞", params:[{ id:"size", label:"Block size", type:"range", min:2, max:40, default:12 }] },
+    { name:"halftone",   icon:"⊡", params:[{ id:"dot_size", label:"Dot size", type:"range", min:3, max:20, default:8 }] },
+    { name:"vignette",   icon:"⬭", params:[{ id:"strength", label:"Strength", type:"range", min:0, max:1.5, step:.05, default:.7 }] },
+    { name:"noise",      icon:"⬛", params:[{ id:"amount", label:"Amount", type:"range", min:1, max:80, default:25 }] },
+    { name:"posterize",  icon:"▣", params:[{ id:"levels", label:"Levels", type:"range", min:2, max:8, default:4 }] },
+  ],
+  transform: [
+    { name:"rotate",  icon:"↻", params:[{ id:"angle", label:"Angle", type:"range", min:-180, max:180, default:90 }] },
+    { name:"flip_h",  icon:"↔", params:[] },
+    { name:"flip_v",  icon:"↕", params:[] },
+    { name:"vignette",icon:"⬭", params:[{ id:"strength", label:"Strength", type:"range", min:0, max:2, step:.05, default:.8 }] },
+    { name:"resize",  icon:"⤢", params:[
+      { id:"width",  label:"Width (px)",  type:"number", default:800 },
+      { id:"height", label:"Height (px)", type:"number", default:600 },
+    ]},
+    { name:"crop", icon:"⊡", params:[
+      { id:"x",      label:"X offset",  type:"number", default:0 },
+      { id:"y",      label:"Y offset",  type:"number", default:0 },
+      { id:"width",  label:"Width",     type:"number", default:400 },
+      { id:"height", label:"Height",    type:"number", default:400 },
+    ]},
+  ],
+};
+
+// ══════════════════════════════════════════════
+//  DOM references
+// ══════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const dropZone     = $("drop-zone");
+const imgContainer = $("img-container");
+const previewImg   = $("preview-img");
+const compareWrap  = $("compare-wrap");
+const compareOrig  = $("compare-orig");
+const compareCurr  = $("compare-curr");
+const compareDivider=$("compare-divider");
+const procBadge    = $("proc-badge");
+const opsList      = $("ops-list");
+const opsEmpty     = $("ops-empty");
+const opsCount     = $("ops-count");
+const filterGrid   = $("filter-grid");
+const fileInput    = $("file-input");
+
+// ══════════════════════════════════════════════
+//  Server check
+// ══════════════════════════════════════════════
+async function checkServer() {
+  try {
+    const r = await fetch(`${API}/filters`, { signal: AbortSignal.timeout(2000) });
+    if (r.ok) {
+      $("st-srv-txt").textContent = "Server online";
+      $("st-server").style.color = "var(--accent2)";
+      return true;
+    }
+  } catch {}
+  $("st-srv-txt").textContent = "Server offline";
+  $("st-server").style.color = "var(--danger)";
+  return false;
+}
+checkServer();
+
+// ══════════════════════════════════════════════
+//  Category tabs
+// ══════════════════════════════════════════════
+let activeCategory = "color";
+
+document.querySelectorAll(".cat-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".cat-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    activeCategory = tab.dataset.cat;
+    renderFilterGrid();
+  });
+});
+
+// ══════════════════════════════════════════════
+//  Render filter grid
+// ══════════════════════════════════════════════
+function renderFilterGrid() {
+  filterGrid.innerHTML = "";
+  const defs = FILTER_DEFS[activeCategory] || [];
+
+  defs.forEach(def => {
+    const card = document.createElement("div");
+    card.className = "filter-card";
+
+    // Build param inputs
+    const paramValues = {};
+    def.params.forEach(p => { paramValues[p.id] = p.default; });
+
+    let paramsHTML = "";
+    def.params.forEach(p => {
+      if (p.type === "range") {
+        const step = p.step || 1;
+        paramsHTML += `
+          <div class="param-row">
+            <div class="param-label">${p.label} <span class="param-val" id="pv-${def.name}-${p.id}">${p.default}</span></div>
+            <input type="range" min="${p.min}" max="${p.max}" step="${step}" value="${p.default}"
+              data-filter="${def.name}" data-param="${p.id}"/>
+          </div>`;
+      } else if (p.type === "number") {
+        paramsHTML += `
+          <div class="param-row">
+            <div class="param-label">${p.label}</div>
+            <input type="number" value="${p.default}" data-filter="${def.name}" data-param="${p.id}"/>
+          </div>`;
+      } else if (p.type === "color_bgr") {
+        paramsHTML += `
+          <div class="param-row">
+            <div class="param-label">${p.label}</div>
+            <input type="color" value="${p.default}" data-filter="${def.name}" data-param="${p.id}"/>
+          </div>`;
+      }
+    });
+
+    card.innerHTML = `
+      <div class="filter-card-header">
+        <span class="filter-card-name">${def.name.replace(/_/g," ")}</span>
+        <span class="filter-card-icon">${def.icon}</span>
+      </div>
+      ${paramsHTML ? `<div class="filter-params">${paramsHTML}</div>` : ""}
+      <button class="add-filter-btn" data-filter="${def.name}">+ Add to stack</button>
+    `;
+
+    filterGrid.appendChild(card);
+
+    // Range live update display
+    card.querySelectorAll("input[type=range]").forEach(el => {
+      el.addEventListener("input", () => {
+        const pv = card.querySelector(`#pv-${def.name}-${el.dataset.param}`);
+        if (pv) pv.textContent = parseFloat(el.value);
+        paramValues[el.dataset.param] = parseFloat(el.value);
+      });
+    });
+    card.querySelectorAll("input[type=number]").forEach(el => {
+      el.addEventListener("change", () => {
+        paramValues[el.dataset.param] = parseFloat(el.value);
+      });
+    });
+    card.querySelectorAll("input[type=color]").forEach(el => {
+      el.addEventListener("change", () => {
+        paramValues[el.dataset.param] = hexToBGR(el.value);
+      });
+      paramValues[el.dataset.param] = hexToBGR(el.value);
+    });
+
+    // Add button
+    card.querySelector(".add-filter-btn").addEventListener("click", () => {
+      if (!originalB64) { toast("Load an image first", "error"); return; }
+      addOperation(def.name, { ...paramValues }, def.name.replace(/_/g," "));
+    });
+  });
+}
+
+function hexToBGR(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [b, g, r];  // OpenCV is BGR
+}
+
+renderFilterGrid();
+
+// ══════════════════════════════════════════════
+//  Operations stack
+// ══════════════════════════════════════════════
+function addOperation(filter, params, label) {
+  operations.push({ filter, params, label });
+  renderOpsList();
+  updateUI();
+  toast(`Added: ${label}`, "success");
+}
+
+function removeOperation(idx) {
+  operations.splice(idx, 1);
+  renderOpsList();
+  updateUI();
+}
+
+function renderOpsList() {
+  opsEmpty.style.display = operations.length ? "none" : "block";
+  // Remove old items
+  Array.from(opsList.children).forEach(c => { if (c !== opsEmpty) c.remove(); });
+
+  operations.forEach((op, i) => {
+    const div = document.createElement("div");
+    div.className = "op-item";
+    div.innerHTML = `
+      <span class="op-name">${op.label}</span>
+      <span class="op-tag">${activeCategory}</span>
+      <button class="op-remove" data-idx="${i}" title="Remove">✕</button>
+    `;
+    div.querySelector(".op-remove").addEventListener("click", e => {
+      e.stopPropagation();
+      removeOperation(parseInt(e.currentTarget.dataset.idx));
+    });
+    opsList.appendChild(div);
+  });
+
+  opsCount.textContent = operations.length;
+  $("st-ops").innerHTML = `<b>${operations.length}</b> operation${operations.length!==1?"s":""}`;
+}
+
+// ══════════════════════════════════════════════
+//  Image load
+// ══════════════════════════════════════════════
+function loadImageFile(file) {
+  if (!file || !file.type.startsWith("image/")) { toast("Not a valid image", "error"); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    originalB64 = e.target.result;
+    currentB64  = e.target.result;
+    historyStack = [];
+    operations  = [];
+    showPreview(originalB64);
+    renderOpsList();
+    updateUI(true);
+    // Measure dims
+    const tmp = new Image();
+    tmp.onload = () => {
+      imgW = tmp.width; imgH = tmp.height;
+      $("st-dims").innerHTML = `<b>${imgW} × ${imgH}</b>`;
+    };
+    tmp.src = originalB64;
+    toast("Image loaded", "success");
+  };
+  reader.readAsDataURL(file);
+}
+
+dropZone.addEventListener("click", () => fileInput.click());
+$("btn-open-file").addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => loadImageFile(fileInput.files[0]));
+
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  loadImageFile(e.dataTransfer.files[0]);
+});
+
+// ══════════════════════════════════════════════
+//  Preview helpers
+// ══════════════════════════════════════════════
+function showPreview(b64) {
+  dropZone.classList.add("hidden");
+  compareWrap.classList.add("hidden");
+  imgContainer.classList.remove("hidden");
+  previewImg.src = b64;
+}
+
+function updateUI(imageLoaded=false) {
+  const hasImg = !!originalB64;
+  const hasOps = operations.length > 0;
+  $("btn-apply").disabled   = !hasImg || !hasOps;
+  $("btn-clear-ops").disabled = !hasOps;
+  $("btn-undo").disabled    = historyStack.length === 0;
+  $("btn-compare").disabled = !currentB64 || currentB64 === originalB64;
+  $("btn-reset").disabled   = !hasImg;
+  $("btn-export").disabled  = !hasImg;
+}
+
+// ══════════════════════════════════════════════
+//  Process
+// ══════════════════════════════════════════════
+$("btn-apply").addEventListener("click", processImage);
+
+async function processImage() {
+  if (!originalB64 || operations.length === 0) return;
+  if (!(await checkServer())) { toast("Server offline – start main.py first", "error"); return; }
+
+  procBadge.classList.add("show");
+  previewImg.classList.add("processing");
+  $("btn-apply").disabled = true;
+
+  // Push current to undo stack
+  historyStack.push(currentB64);
+
+  try {
+    const res = await fetch(`${API}/process`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image:      originalB64,
+        operations: operations,
+        format:     "JPEG",
+        quality:    92,
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    currentB64 = data.result;
+    showPreview(currentB64);
+    operations = [];
+    renderOpsList();
+    updateUI();
+    toast("Processing complete!", "success");
+
+  } catch (err) {
+    historyStack.pop();
+    toast("Error: " + err.message, "error");
+  } finally {
+    procBadge.classList.remove("show");
+    previewImg.classList.remove("processing");
+    $("btn-apply").disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════
+//  Undo
+// ══════════════════════════════════════════════
+$("btn-undo").addEventListener("click", () => {
+  if (!historyStack.length) return;
+  currentB64 = historyStack.pop();
+  showPreview(currentB64);
+  updateUI();
+  toast("Undone", "success");
+});
+
+// ══════════════════════════════════════════════
+//  Reset
+// ══════════════════════════════════════════════
+$("btn-reset").addEventListener("click", () => {
+  if (!originalB64) return;
+  historyStack = [];
+  operations   = [];
+  currentB64   = originalB64;
+  showPreview(originalB64);
+  renderOpsList();
+  updateUI();
+  toast("Reset to original", "success");
+});
+
+// ══════════════════════════════════════════════
+//  Compare
+// ══════════════════════════════════════════════
+$("btn-compare").addEventListener("click", () => {
+  comparing = !comparing;
+  if (comparing) {
+    compareOrig.src = originalB64;
+    compareCurr.src = currentB64;
+    imgContainer.classList.add("hidden");
+    compareWrap.classList.remove("hidden");
+    $("btn-compare").textContent = "✕ Exit Compare";
+  } else {
+    compareWrap.classList.add("hidden");
+    imgContainer.classList.remove("hidden");
+    $("btn-compare").textContent = "⇔ Compare";
+  }
+});
+
+// Drag compare divider
+let dragging = false;
+compareDivider.addEventListener("mousedown", () => { dragging = true; });
+document.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  const rect = compareWrap.getBoundingClientRect();
+  let pct = (e.clientX - rect.left) / rect.width;
+  pct = Math.max(0.02, Math.min(0.98, pct));
+  compareDivider.style.left = (pct*100) + "%";
+  compareOrig.style.clipPath = `inset(0 ${(1-pct)*100}% 0 0)`;
+});
+document.addEventListener("mouseup", () => { dragging = false; });
+
+// ══════════════════════════════════════════════
+//  Export modal
+// ══════════════════════════════════════════════
+$("btn-export").addEventListener("click", () => {
+  $("export-modal").classList.add("open");
+});
+$("exp-cancel").addEventListener("click", () => {
+  $("export-modal").classList.remove("open");
+});
+$("export-modal").addEventListener("click", e => {
+  if (e.target === $("export-modal")) $("export-modal").classList.remove("open");
+});
+$("exp-quality").addEventListener("input", () => {
+  $("exp-q-val").textContent = $("exp-quality").value;
+});
+$("exp-format").addEventListener("change", () => {
+  $("exp-quality-row").style.display = $("exp-format").value === "PNG" ? "none" : "block";
+});
+
+$("exp-download").addEventListener("click", async () => {
+  if (!currentB64) return;
+  const fmt = $("exp-format").value;
+  const q   = parseInt($("exp-quality").value);
+  const name = $("exp-name").value || "darkroom-export";
+
+  $("exp-download").disabled = true;
+  $("exp-download").textContent = "Processing…";
+
+  try {
+    // Re-process with chosen format/quality
+    const res = await fetch(`${API}/process`, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ image: currentB64, operations: [], format: fmt, quality: q })
+    });
+    const data = await res.json();
+    const b64 = data.result;
+    const a = document.createElement("a");
+    a.href = b64;
+    a.download = `${name}.${fmt.toLowerCase()}`;
+    a.click();
+    $("export-modal").classList.remove("open");
+    toast("Download started!", "success");
+  } catch (e) {
+    toast("Export failed: " + e.message, "error");
+  } finally {
+    $("exp-download").disabled = false;
+    $("exp-download").textContent = "Download";
+  }
+});
+
+// Clear ops
+$("btn-clear-ops").addEventListener("click", () => {
+  operations = [];
+  renderOpsList();
+  updateUI();
+});
+
+// ══════════════════════════════════════════════
+//  Toast
+// ══════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type="success") {
+  const el = $("toast");
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ""; }, 2800);
+}
+
+// Zoom fit (trivial – images are already max-content)
+$("btn-zoom-fit").addEventListener("click", () => {
+  previewImg.style.maxWidth  = "100%";
+  previewImg.style.maxHeight = "100%";
+});
+
+// Keyboard shortcuts
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.ctrlKey && e.key === "z") $("btn-undo").click();
+  if (e.ctrlKey && e.key === "s") $("btn-export").click();
+  if (e.key === "Enter")          $("btn-apply").click();
+});
+</script>
+</body>
+</html>
